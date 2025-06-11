@@ -15,12 +15,12 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-    @ExceptionHandler(VerificationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleVerificationException(VerificationException ex) {
-        log.error("Verification exception", ex.getMessage());
-        return ResponseEntity.badRequest()
-                .body(ApiResponse.error(ex.getMessage()));
-    }
+//    @ExceptionHandler(VerificationException.class)
+//    public ResponseEntity<ApiResponse<Void>> handleVerificationException(VerificationException ex) {
+//        log.error("Verification exception", ex.getMessage());
+//        return ResponseEntity.badRequest()
+//                .body(ApiResponse.error(ex.getMessage()));
+//    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(MethodArgumentNotValidException ex) {
@@ -40,10 +40,10 @@ public class GlobalExceptionHandler {
                 ;
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> hanldGenericException(Exception ex) {
-        log.error("Generic exception", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(ex.getMessage()));
-    }
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<ApiResponse<Void>> hanldGenericException(Exception ex) {
+//        log.error("Generic exception", ex);
+//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                .body(ApiResponse.error(ex.getMessage()));
+//    }
 }

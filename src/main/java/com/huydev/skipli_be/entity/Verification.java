@@ -4,9 +4,6 @@ package com.huydev.skipli_be.entity;
 import lombok.*;
 import lombok.experimental.Accessors;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 import java.time.Instant;
 
 @Accessors(chain = true)
@@ -22,5 +19,5 @@ public class Verification {
     String token;
     Instant expiresAt;
     VerificationType verificationType;
-    LocalDateTime createdAt;
+    Instant createdAt;
 }

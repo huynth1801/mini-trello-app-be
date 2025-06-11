@@ -1,5 +1,7 @@
 package com.huydev.skipli_be.service.authentication;
 
+import com.huydev.skipli_be.dto.response.UserResponse;
+import com.huydev.skipli_be.entity.Users;
 import com.huydev.skipli_be.entity.Verification;
 import com.huydev.skipli_be.entity.VerificationType;
 import com.huydev.skipli_be.exception.VerificationException;
@@ -38,6 +40,7 @@ public class VerificationService {
                 .email(email)
                 .token(token)
                 .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
+                .createdAt(Instant.now())
                 .verificationType(VerificationType.EMAIL_VERIFICATION)
                 .build();
 
@@ -46,6 +49,35 @@ public class VerificationService {
                 "token", token
         );
         emailSenderService.sendVerificationToken(email, attributes);
+    }
+
+    public UserResponse signUp(String email, String verificationCode) {
+        Verification verification = firebaseService.getVerificationByEmailAndToken(email, verificationCode);
+        log.info("Verification token: " + verification);
+
+        if(verification == null) {
+            throw new VerificationException("Invalid verification code");
+        }
+
+        if(verification.getExpiresAt().isBefore(Instant.now())) {
+            throw new VerificationException("Expired verification code");
+        }
+
+        if(firebaseService.userExists(email)) {
+            throw new VerificationException("User " + email + " already exists");
+        }
+
+        Users user = Users.builder()
+                .email(email)
+                .verified(true)
+                .build();
+
+        String userId = firebaseService.saveUser(user);
+
+        return UserResponse.builder()
+                .id(userId)
+                .email(email)
+                .build();
     }
 
     private String generateVerificationToken() {

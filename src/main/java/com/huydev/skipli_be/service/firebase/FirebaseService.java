@@ -3,13 +3,16 @@ package com.huydev.skipli_be.service.firebase;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.firebase.cloud.FirestoreClient;
+import com.huydev.skipli_be.entity.Users;
 import com.huydev.skipli_be.entity.Verification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -37,14 +40,14 @@ public class FirebaseService {
         }
     }
 
-    public String saveUser(String email, String verification) {
+    public String saveUser(Users user) {
         try {
             Firestore db = getFirestore();
             String userId = UUID.randomUUID().toString();
 
             Map<String, Object> userData = new HashMap<>();
             userData.put("id", userId);
-            userData.put("email", email);
+            userData.put("email", user.getEmail());
             userData.put("verified", true);
             userData.put("createdAt", LocalDateTime.now().toString());
             userData.put("updatedAt", LocalDateTime.now().toString());
@@ -67,7 +70,7 @@ public class FirebaseService {
             verificationData.put("token", verification.getToken());
             verificationData.put("expiresAt", verification.getExpiresAt().toString());
             verificationData.put("verificationType", verification.getVerificationType().toString());
-            verificationData.put("createdAt", LocalDateTime.now().toString());
+            verificationData.put("createdAt", Instant.now().toString());
 
             db.collection(VERIFICATION_COLLECTION).document(verificationId).set(verificationData).get();
         } catch (Exception e) {
@@ -78,23 +81,48 @@ public class FirebaseService {
     public Verification getVerificationByEmailAndToken(String email, String token) {
         try {
             Firestore db = getFirestore();
+            log.info("DB collection contains {} users", db);
+            log.info("Fetching verification for email={}, token={}", email, token);
 
             var verificationQuery = db.collection(VERIFICATION_COLLECTION)
                     .whereEqualTo("email", email)
-                    .whereEqualTo("token", token)
                     .get()
                     .get();
+
             if(verificationQuery.isEmpty()) {
+                log.warn("No verification found for email={}", email);
                 return null;
             }
 
-            QueryDocumentSnapshot doc = verificationQuery.getDocuments().get(0);
-            return Verification.builder()
-                    .id(doc.getString("id"))
-                    .email(doc.getString("email"))
-                    .token(doc.getString("token"))
-                    .expiresAt(java.time.Instant.parse(doc.getString("expiredAt")))
-                    .build();
+            for(QueryDocumentSnapshot doc: verificationQuery.getDocuments()) {
+                String storedToken = doc.getString("token");
+
+                if(storedToken == null) {
+                    log.warn("Verification entry with id={} has no token", doc.getId());
+                    continue;
+                }
+
+                if(storedToken.equals(token)) {
+                    String expiresAtStr = doc.getString("expiresAt");
+                    if(expiresAtStr == null) {
+                        log.warn("Verification entry with id={} has no expiresAt", doc.getId());
+                        return null;
+                    }
+
+                    log.info("Matched verification token for email={}", email);
+                    return Verification.builder()
+                            .id(doc.getString("id"))
+                            .email(doc.getString("email"))
+                            .token(storedToken)
+                            .expiresAt(Instant.parse(expiresAtStr))
+                            .build();
+                } else {
+                    log.warn("Token mismatch. Provided token={}, Store={}", token, storedToken);
+                }
+            }
+
+            log.warn("No verification found for email={}", email);
+            return null;
         } catch (Exception e) {
             return null;
         }
