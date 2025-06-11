@@ -6,9 +6,7 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
-import com.huydev.skipli_be.entity.Users;
-import com.huydev.skipli_be.entity.Verification;
-import com.huydev.skipli_be.entity.VerificationType;
+import com.huydev.skipli_be.entity.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +19,9 @@ import java.util.*;
 public class FirebaseService {
     private static final String USERS_COLLECTION = "users";
     private static final String VERIFICATION_COLLECTION = "verifications";
+    private static final String CARD_COLLECTION = "cards";
+    private static final String TASKS_COLLECTION = "tasks";
+    private static final String BOARD_COLLECTION = "boards";
 
     private Firestore getFirestore() {
         return FirestoreClient.getFirestore();
@@ -50,7 +51,6 @@ public class FirebaseService {
                     .get()
                     .getDocuments()
                     .stream().findFirst().orElse(null);
-            log.info("DocumentSnapshot found: " + document);
 
             if(document != null && document.exists()) {
                 Users user = new Users();
@@ -62,13 +62,29 @@ public class FirebaseService {
                 if(createdAtValue instanceof Instant) {
                     user.setCreatedAt(Instant.parse(String.valueOf(createdAtValue)));
                 }
-                log.info("User found: " + user);
                 return user;
             }
             return null;
         } catch (Exception e) {
             log.error("Error getting user by email {}",e.getMessage());
             return null;
+        }
+    }
+
+    public String saveBoard(Board board) {
+        try {
+            Firestore db = getFirestore();
+            String boardId = UUID.randomUUID().toString();
+
+            Map<String, Object> boardMap = new HashMap<>();
+            boardMap.put("id", boardId);
+            boardMap.put("name", board.getName());
+            boardMap.put("description", board.getDescription());
+
+            db.collection(BOARD_COLLECTION).document(boardId).set(boardMap).get();
+            return boardId;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save board" + e);
         }
     }
 
@@ -87,7 +103,27 @@ public class FirebaseService {
             db.collection(USERS_COLLECTION).document(userId).set(userData).get();
             return userId;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save user", e);
+            throw new RuntimeException("Failed to save user " + e);
+        }
+    }
+
+    public String saveCard(Card card) {
+        try {
+            Firestore db = getFirestore();
+            String cardId = UUID.randomUUID().toString();
+
+            Map<String, Object> cardData = new HashMap<>();
+            cardData.put("id", cardId);
+            cardData.put("name", card.getName());
+            cardData.put("description", card.getDescription());
+            cardData.put("userId", card.getUserId());
+            cardData.put("createdAt", Instant.now().toString());
+            cardData.put("updatedAt", Instant.now().toString());
+
+            db.collection(CARD_COLLECTION).document(cardId).set(cardData).get();
+            return cardId;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save card", e);
         }
     }
 
