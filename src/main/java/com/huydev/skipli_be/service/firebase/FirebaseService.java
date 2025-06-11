@@ -1,19 +1,20 @@
 package com.huydev.skipli_be.service.firebase;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 import com.huydev.skipli_be.entity.Users;
 import com.huydev.skipli_be.entity.Verification;
+import com.huydev.skipli_be.entity.VerificationType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -40,6 +41,37 @@ public class FirebaseService {
         }
     }
 
+    public Users getUserByEmail(String email) {
+        try {
+            Firestore db = getFirestore();
+            DocumentSnapshot document = db.collection(USERS_COLLECTION)
+                    .whereEqualTo("email", email)
+                    .get()
+                    .get()
+                    .getDocuments()
+                    .stream().findFirst().orElse(null);
+            log.info("DocumentSnapshot found: " + document);
+
+            if(document != null && document.exists()) {
+                Users user = new Users();
+                user.setId(document.getId());
+                user.setEmail(document.getString("email"));
+                user.setVerified(Boolean.TRUE.equals(document.getBoolean("verified")));
+
+                Object createdAtValue = document.get("createdAt");
+                if(createdAtValue instanceof Instant) {
+                    user.setCreatedAt(Instant.parse(String.valueOf(createdAtValue)));
+                }
+                log.info("User found: " + user);
+                return user;
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Error getting user by email {}",e.getMessage());
+            return null;
+        }
+    }
+
     public String saveUser(Users user) {
         try {
             Firestore db = getFirestore();
@@ -49,8 +81,8 @@ public class FirebaseService {
             userData.put("id", userId);
             userData.put("email", user.getEmail());
             userData.put("verified", true);
-            userData.put("createdAt", LocalDateTime.now().toString());
-            userData.put("updatedAt", LocalDateTime.now().toString());
+            userData.put("createdAt", Instant.now().toString());
+            userData.put("updatedAt", Instant.now().toString());
 
             db.collection(USERS_COLLECTION).document(userId).set(userData).get();
             return userId;
@@ -78,19 +110,17 @@ public class FirebaseService {
         }
     }
 
-    public Verification getVerificationByEmailAndToken(String email, String token) {
+    public Verification getVerificationByEmailAndToken(String email, String token, VerificationType verificationType) {
         try {
             Firestore db = getFirestore();
-            log.info("DB collection contains {} users", db);
-            log.info("Fetching verification for email={}, token={}", email, token);
 
             var verificationQuery = db.collection(VERIFICATION_COLLECTION)
                     .whereEqualTo("email", email)
+                    .whereEqualTo("verificationType", verificationType)
                     .get()
                     .get();
 
             if(verificationQuery.isEmpty()) {
-                log.warn("No verification found for email={}", email);
                 return null;
             }
 
@@ -98,49 +128,47 @@ public class FirebaseService {
                 String storedToken = doc.getString("token");
 
                 if(storedToken == null) {
-                    log.warn("Verification entry with id={} has no token", doc.getId());
                     continue;
                 }
 
                 if(storedToken.equals(token)) {
                     String expiresAtStr = doc.getString("expiresAt");
                     if(expiresAtStr == null) {
-                        log.warn("Verification entry with id={} has no expiresAt", doc.getId());
                         return null;
                     }
 
-                    log.info("Matched verification token for email={}", email);
                     return Verification.builder()
                             .id(doc.getString("id"))
                             .email(doc.getString("email"))
+                            .verificationType(VerificationType.valueOf(doc.getString("verificationType")))
                             .token(storedToken)
                             .expiresAt(Instant.parse(expiresAtStr))
+                            .createdAt(Instant.parse(Objects.requireNonNull(doc.getString("createdAt"))))
                             .build();
                 } else {
                     log.warn("Token mismatch. Provided token={}, Store={}", token, storedToken);
                 }
             }
 
-            log.warn("No verification found for email={}", email);
             return null;
         } catch (Exception e) {
             return null;
         }
     }
 
-    public void deleteVerificationByEmail(String email) {
+    public void deleteVerificationByEmail(String email, VerificationType verificationType) {
         try {
             Firestore db = getFirestore();
-
-            var verificationQuery = db.collection(VERIFICATION_COLLECTION)
+            ApiFuture<QuerySnapshot> query = db.collection(VERIFICATION_COLLECTION)
                     .whereEqualTo("email", email)
-                    .get()
+                    .whereEqualTo("verificationType", verificationType.name())
                     .get();
-            for (QueryDocumentSnapshot doc : verificationQuery) {
+            List<QueryDocumentSnapshot> documents = query.get().getDocuments();
+            for(QueryDocumentSnapshot doc: documents) {
                 doc.getReference().delete();
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to delete verification", e);
+            throw new RuntimeException("Failed to delete verification for email", e);
         }
     }
 }
