@@ -87,6 +87,41 @@ public class CardService {
 
     }
 
+    // Retrieve card detail
+    public CardCreationResponse retrieveCardById(String boardId, String cardId, String userId) {
+        Card card = getCardFromFirestoreById(boardId, cardId, userId);
+        return CardCreationResponse.builder()
+                .id(card.getId())
+                .name(card.getName())
+                .description(card.getDescription())
+                .build();
+    }
+
+    private Card getCardFromFirestoreById(String boardId, String cardId, String userId) {
+        try {
+            if(!hasAccessToBoard(boardId, userId)) {
+                throw new RuntimeException("Access denied");
+            }
+
+            Firestore db = getFirestore();
+            DocumentReference docRef = db.collection(CARD_COLLECTION).document(cardId);
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
+
+            if(!document.exists()) {
+                throw new RuntimeException("Card not found");
+            }
+
+            String cardBoardId = document.getString("boardId");
+            if (!boardId.equals(cardBoardId)) {
+                throw new RuntimeException("Card does not belong to this board");
+            }
+            return convertDocumentToCard(document);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get card from firestore" + e);
+        }
+    }
+
     // Check if user can access to the board
     private boolean hasAccessToBoard(String boardId, String userId) {
         try {
@@ -115,5 +150,27 @@ public class CardService {
 
         List<String> listMember = (List<String>) documentSnapshot.get("list_member");
         return listMember != null && listMember.contains(userId);
+    }
+
+    private Card convertDocumentToCard(DocumentSnapshot document) {
+        Card card = new Card();
+        card.setId(document.getString("id"));
+        card.setName(document.getString("name"));
+        card.setDescription(document.getString("description"));
+        card.setBoardId(document.getString("boardId"));
+        card.setCreatedBy(document.getString("createdBy"));
+        card.setList_member((List<String>) document.get("list_member"));
+        // Parse timestamps
+        String createdAtStr = document.getString("createdAt");
+        String updatedAtStr = document.getString("updatedAt");
+
+        if (createdAtStr != null) {
+            card.setCreatedAt(Instant.parse(createdAtStr));
+        }
+        if (updatedAtStr != null) {
+            card.setUpdatedAt(Instant.parse(updatedAtStr));
+        }
+
+        return card;
     }
 }

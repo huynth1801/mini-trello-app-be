@@ -23,9 +23,15 @@ public class CardController {
     public ResponseEntity<CardCreationResponse> createCard(@PathVariable String boardId, @RequestBody CardCreationRequest cardCreationRequest
             , @RequestHeader("Authorization") String authorizationHeader) {
         String userId = getUserIdFromAuthorizationToken(authorizationHeader);
-        log.info("Card userId: " + userId);
         CardCreationResponse cardCreationResponse = cardService.createCard(boardId, cardCreationRequest, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(cardCreationResponse);
+    }
+
+    @GetMapping("{boardId}/cards/{id}")
+    public ResponseEntity<CardCreationResponse> retrieveCardDetailsById(@PathVariable String boardId, @PathVariable String id, @RequestHeader("Authorization") String authorizationHeader) {
+        String userId = getUserIdFromAuthorizationToken(authorizationHeader);
+        CardCreationResponse cardCreationResponse = cardService.retrieveCardById(boardId, id, userId);
+        return ResponseEntity.status(HttpStatus.OK).body(cardCreationResponse);
     }
 
     private String getUserIdFromAuthorizationToken(String authorizationHeader) {
