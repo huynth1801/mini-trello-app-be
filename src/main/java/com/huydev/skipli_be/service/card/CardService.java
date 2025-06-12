@@ -1,14 +1,14 @@
 package com.huydev.skipli_be.service.card;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
+import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.huydev.skipli_be.dto.request.CardCreationRequest;
+import com.huydev.skipli_be.dto.request.CardUpdateRequest;
 import com.huydev.skipli_be.dto.response.CardCreationResponse;
+import com.huydev.skipli_be.dto.response.CardUserResponse;
 import com.huydev.skipli_be.entity.Card;
+import com.huydev.skipli_be.entity.Task;
 import com.huydev.skipli_be.service.board.BoardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +23,7 @@ import java.util.*;
 public class CardService {
     private static final String CARD_COLLECTION = "cards";
     private static final String BOARD_COLLECTION = "boards";
+    private static final String TASK_COLLECTION = "tasks";
     private final BoardService boardService;
 
     private Firestore getFirestore() {
@@ -50,6 +51,7 @@ public class CardService {
             }
 
             Firestore db = getFirestore();
+            DocumentReference cardRef = db.collection(CARD_COLLECTION).document();
             String cardId = UUID.randomUUID().toString();
 
             List<String> userIdsList = new ArrayList<>();
@@ -69,6 +71,15 @@ public class CardService {
                     .document(cardId)
                     .set(cardMap);
             future.get();
+
+            if (card.getTasks() != null && !card.getTasks().isEmpty()) {
+                CollectionReference taskCollection = cardRef.collection(TASK_COLLECTION);
+                for (Task task : card.getTasks()) {
+                    DocumentReference taskRef = taskCollection.document();
+                    task.setId(taskRef.getId());
+                    taskRef.set(task).get();
+                }
+            }
 
             Card createdCard = new Card();
             createdCard.setId(cardId);
@@ -120,6 +131,109 @@ public class CardService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to get card from firestore" + e);
         }
+    }
+
+    // Retrieve cards by User
+    public List<CardUserResponse> getCardsByBoardId(String boardId, String userId) {
+        List<Card> cards = getCardFromFirestoreByName(boardId, userId);
+        List<CardUserResponse> responses = new ArrayList<>();
+
+        for (Card card : cards) {
+            int tasksCount = card.getTasks() != null ? card.getTasks().size() : 0;
+
+            CardUserResponse response = CardUserResponse.builder()
+                    .id(card.getId())
+                    .name(card.getName())
+                    .description(card.getDescription())
+                    .tasks_count(tasksCount)
+                    .list_member(card.getList_member())
+                    .createdAt(card.getCreatedAt())
+                    .build();
+
+            responses.add(response);
+        }
+
+        return responses;
+    }
+
+    // Update card
+    public CardCreationResponse updateCardById(String boardId, String cardId, CardUpdateRequest request,String userId) {
+        Card updatedCard = updateCardFromFireStore(boardId, cardId, request, userId);
+        return  CardCreationResponse.builder()
+                .id(updatedCard.getId())
+                .name(updatedCard.getName())
+                .description(updatedCard.getDescription())
+                .build();
+    }
+
+    private Card updateCardFromFireStore(String boardId, String cardId, CardUpdateRequest request , String userId) {
+        try {
+            if(!hasAccessToBoard(boardId, userId)) {
+                throw new RuntimeException("Access denied");
+            }
+
+            Firestore db = getFirestore();
+            DocumentReference cardRef = db.collection(CARD_COLLECTION).document(cardId);
+
+            ApiFuture<DocumentSnapshot> future = cardRef.get();
+            DocumentSnapshot document = future.get();
+
+            if(!document.exists()) {
+                throw new RuntimeException("Card not found");
+            }
+
+            String cardBoardId = document.getString("boardId");
+            if (!boardId.equals(cardBoardId)) {
+                throw new RuntimeException("Card does not belong to this board");
+            }
+
+            Map<String, Object> updates = new HashMap<>();
+            if(request.getName() != null && !request.getName().trim().isEmpty()) {
+                updates.put("name", request.getName().trim());
+            }
+            if(request.getDescription() != null) {
+                updates.put("description", request.getDescription().trim());
+            }
+            if (request.getParams() != null) {
+                updates.put("params", request.getParams());
+            }
+
+            ApiFuture<WriteResult> updateFuture = cardRef.update(updates);
+            updateFuture.get();
+
+            ApiFuture<DocumentSnapshot> updatedFuture = cardRef.get();
+            DocumentSnapshot updatedDocument = updatedFuture.get();
+            return convertDocumentToCard(updatedDocument);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update card" + e);
+        }
+    }
+
+
+    private List<Card> getCardFromFirestoreByName(String boardId, String userId) {
+        try {
+            if(!hasAccessToBoard(boardId, userId)) {
+                throw new RuntimeException("Access denied");
+            }
+
+            Firestore db = getFirestore();
+            List<Card> cards = new ArrayList<>();
+
+            ApiFuture<QuerySnapshot> future = db.collection(CARD_COLLECTION)
+                    .whereEqualTo("boardId", boardId)
+                    .whereArrayContains("list_member", userId)
+                    .get();
+
+            QuerySnapshot querySnapshot = future.get();
+
+            for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                Card card = convertDocumentToCard(document);
+                cards.add(card);
+            }
+
+            return cards;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get cards: " + e.getMessage());        }
     }
 
     // Check if user can access to the board
