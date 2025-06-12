@@ -1,24 +1,17 @@
-package com.huydev.skipli_be.entity;
+package com.huydev.skipli_be.dto.request;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
-import java.util.List;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class Card {
-    String id;
+public class CardCreationRequest {
     String name;
     String description;
-    List<String> list_member;
     Instant createdAt;
-    Instant updatedAt;
-    String boardId;
-    String createdBy;
-    Integer taskCount;
 }

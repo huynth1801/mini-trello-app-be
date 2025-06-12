@@ -18,8 +18,6 @@ import java.util.*;
 public class FirebaseService {
     private static final String USERS_COLLECTION = "users";
     private static final String VERIFICATION_COLLECTION = "verifications";
-    private static final String CARD_COLLECTION = "cards";
-    private static final String TASKS_COLLECTION = "tasks";
 
     private Firestore getFirestore() {
         return FirestoreClient.getFirestore();
@@ -85,26 +83,6 @@ public class FirebaseService {
             return userId;
         } catch (Exception e) {
             throw new RuntimeException("Failed to save user " + e);
-        }
-    }
-
-    public String saveCard(Card card) {
-        try {
-            Firestore db = getFirestore();
-            String cardId = UUID.randomUUID().toString();
-
-            Map<String, Object> cardData = new HashMap<>();
-            cardData.put("id", cardId);
-            cardData.put("name", card.getName());
-            cardData.put("description", card.getDescription());
-            cardData.put("userId", card.getUserId());
-            cardData.put("createdAt", Instant.now().toString());
-            cardData.put("updatedAt", Instant.now().toString());
-
-            db.collection(CARD_COLLECTION).document(cardId).set(cardData).get();
-            return cardId;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to save card", e);
         }
     }
 
