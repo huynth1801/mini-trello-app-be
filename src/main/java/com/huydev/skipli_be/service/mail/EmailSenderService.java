@@ -5,6 +5,7 @@ import freemarker.template.TemplateException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,15 @@ public class EmailSenderService {
         sendEmail(toEmail, "Verify your email", text);
     }
 
+    public void sendBoardInvitationEmail(String toEmail, Map<String, Object> attributes) {
+        try {
+            String text = getEmailContent("board-invitation.ftlh", attributes);
+            sendEmail(toEmail, "You're invited to join a board!", text);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send board invitation email", e);
+        }
+    }
+
     private String getEmailContent(String templateName, Map<String, Object> model) {
         try (StringWriter writer = new StringWriter()) {
             freemarkerConfig.getTemplate(templateName).process(model, writer);
@@ -37,7 +47,7 @@ public class EmailSenderService {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
+            helper.setFrom("noreply@huydev.com");
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(text, true);
