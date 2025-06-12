@@ -83,7 +83,6 @@ public class BoardService {
             Firestore db = getFirestore();
             List<Board> boards = new ArrayList<>();
 
-            // Query để lấy tất cả board mà userId nằm trong array userIds
             ApiFuture<QuerySnapshot> future = db.collection(BOARD_COLLECTION)
                     .whereArrayContains("userIds", userId)
                     .get();
@@ -219,7 +218,6 @@ public class BoardService {
         board.setName(document.getString("name"));
         board.setDescription(document.getString("description"));
 
-        // Get list userIds
         List<String> userIds = (List<String>) document.get("userId");
         board.setUserIds(userIds);
 

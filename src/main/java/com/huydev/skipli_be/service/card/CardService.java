@@ -209,6 +209,32 @@ public class CardService {
         }
     }
 
+    public void deleteCardById(String boardId, String cardId, String userId) {
+        deleteCardFromFireStore(boardId, cardId, userId);
+    }
+
+    private void deleteCardFromFireStore(String boardId, String cardId, String userId) {
+        try {
+            if(!hasAccessToBoard(boardId, userId)) {
+                throw new RuntimeException("Access denied. You can not delete this card");
+            }
+
+            Firestore db = getFirestore();
+            ApiFuture<QuerySnapshot> future = db.collection(CARD_COLLECTION)
+                    .whereEqualTo("boardId", boardId)
+                    .whereEqualTo("cardId", cardId)
+                    .get();
+
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+            for (QueryDocumentSnapshot document : documents) {
+                document.getReference().delete();
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting card from Firestore", e);
+        }
+    }
 
     private List<Card> getCardFromFirestoreByName(String boardId, String userId) {
         try {

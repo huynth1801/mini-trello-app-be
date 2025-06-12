@@ -51,6 +51,13 @@ public class CardController {
         return ResponseEntity.status(HttpStatus.OK).body(cardCreationResponse);
     }
 
+    @DeleteMapping("/{boardId}/cards/{id}")
+    public ResponseEntity<Void> deleteCardById(@PathVariable String boardId, @PathVariable String id, @RequestHeader("Authorization") String authorizationHeader) {
+        String userId = getUserIdFromAuthorizationToken(authorizationHeader);
+        cardService.deleteCardById(boardId, id, userId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
     private String getUserIdFromAuthorizationToken(String authorizationHeader) {
         String token = authorizationHeader.replace("Bearer ", "").trim();
         return jwtUtils.extractUserId(token);
