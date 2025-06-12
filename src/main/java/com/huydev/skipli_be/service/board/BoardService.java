@@ -183,6 +183,35 @@ public class BoardService {
         }
     }
 
+    // Delete board by id
+    public void deleteBoardById(String boardId, String userId) throws InterruptedException {
+        deleteBoardFromFireStore(boardId, userId);
+    }
+
+    private void deleteBoardFromFireStore(String boardId, String userId) throws InterruptedException {
+        try {
+            Firestore db = getFirestore();
+            DocumentReference docRef = db.collection(BOARD_COLLECTION).document(boardId);
+
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
+
+            if(!document.exists()) {
+                throw new RuntimeException("Board not found: " + boardId);
+            }
+
+            List<String> userIdsList = (List<String>) document.get("userIds");
+            if(userIdsList == null || !userIdsList.contains(userId)) {
+                throw new RuntimeException("Access denied");
+            }
+
+            ApiFuture<WriteResult> deleteFuture = docRef.delete();
+            deleteFuture.get();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete board" + e.getMessage());
+        }
+    }
+
     // Helper method convert document to object
     private Board convertDocumentToBoard(DocumentSnapshot document) {
         Board board = new Board();

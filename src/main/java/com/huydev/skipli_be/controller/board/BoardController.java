@@ -50,6 +50,13 @@ public class BoardController {
         return ResponseEntity.status(HttpStatus.OK).body(boardCreationResponse);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBoardById(@PathVariable("id") String id, @RequestHeader("Authorization") String authorizationHeader) throws InterruptedException {
+        String userId = getUserIdFromAuthorizationToken(authorizationHeader);
+        boardService.deleteBoardById(id, userId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
     private String getUserIdFromAuthorizationToken(String authorizationHeader) {
         String token = authorizationHeader.replace("Bearer ", "").trim();
         return jwtUtils.extractUserId(token);
