@@ -6,6 +6,7 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
+import com.huydev.skipli_be.constant.AppConstant;
 import com.huydev.skipli_be.dto.request.BoardInviteRequest;
 import com.huydev.skipli_be.entity.BoardInvitation;
 import com.huydev.skipli_be.entity.InviteStatus;
@@ -102,8 +103,12 @@ public class BoardInvitationService {
             emailData.put("inviteId", invitation.getInviteId());
             emailData.put("boardId", invitation.getBoardId());
 
-            String invitationLink = String.format("https://your-app.com/boards/invitations/%s",
-                    invitation.getBoardId());
+            String invitationLink = String.format("%s/invite/response?boardId=%s&inviteId=%s",
+                    AppConstant.FRONTEND_HOST,
+                    invitation.getBoardId(),
+                    invitation.getInviteId()
+            );
+
             emailData.put("invitationLink", invitationLink);
 
             emailSenderService.sendBoardInvitationEmail(invitation.getEmailMember(), emailData);
