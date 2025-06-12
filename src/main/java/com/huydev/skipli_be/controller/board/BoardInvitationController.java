@@ -2,6 +2,7 @@ package com.huydev.skipli_be.controller.board;
 
 import com.huydev.skipli_be.config.JwtUtils;
 import com.huydev.skipli_be.dto.request.BoardInviteRequest;
+import com.huydev.skipli_be.dto.request.ReplyInvitationRequest;
 import com.huydev.skipli_be.dto.response.BoardInviteResponse;
 import com.huydev.skipli_be.service.board.BoardInvitationService;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -54,6 +56,31 @@ public class BoardInvitationController {
         return ResponseEntity.ok(
                 BoardInviteResponse.builder()
                         .success(true)
+                        .build()
+        );
+    }
+
+    // Reply request accepted/declined
+    @PostMapping("/{boardId}/cards/{id}/invite/accept")
+    public ResponseEntity<BoardInviteResponse> acceptInvitation(@PathVariable String boardId, @PathVariable String id,
+                                                                @RequestBody ReplyInvitationRequest replyInvitationRequest,
+                                                                @RequestHeader("Authorization") String authorizationHeader) throws ExecutionException, InterruptedException {
+        String currentUserId = getUserIdFromAuthorizationToken(authorizationHeader);
+
+        if(!Arrays.asList("ACCEPTED", "DECLINED").contains(replyInvitationRequest.getStatus())) {
+           return ResponseEntity.badRequest()
+                   .body(BoardInviteResponse.builder()
+                           .success(false)
+                           .message("Invalid status. Must be 'ACCEPTED' or 'DECLINED' ")
+                           .build());
+        }
+
+        boardInvitationService.updateInvitationStatus(replyInvitationRequest.getInviteId(), boardId , replyInvitationRequest.getStatus(), currentUserId);
+
+        return ResponseEntity.ok(
+                BoardInviteResponse.builder()
+                        .success(true)
+                        .message("Invitation " + replyInvitationRequest.getStatus() + " successfully")
                         .build()
         );
     }

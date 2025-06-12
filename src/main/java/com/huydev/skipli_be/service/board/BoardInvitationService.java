@@ -137,6 +137,59 @@ public class BoardInvitationService {
         }
     }
 
+    public void updateInvitationStatus(String inviteId, String boardId, String status, String userId) throws ExecutionException, InterruptedException {
+        Firestore db = getFirestore();
+        DocumentReference inviteRef = db.collection(INVITE_COLLECTION).document(inviteId);
+        ApiFuture<DocumentSnapshot> future = inviteRef.get();
+        DocumentSnapshot document = future.get();
+
+        if (!document.exists()) {
+            throw new RuntimeException("Invitation does not exist");
+        }
+
+        String memberId = document.getString("memberId");
+        if (!userId.equals(memberId)) {
+            throw new RuntimeException("Access denied: You can only update your own invitation");
+        }
+
+        Map<String, Object> invitationMap = new HashMap<>();
+        invitationMap.put("status", status);
+        invitationMap.put("updatedAt", Instant.now().toString());
+
+        inviteRef.update(invitationMap).get();
+
+        if(InviteStatus.ACCEPTED.toString().equals(status)) {
+            addUserToBoard(boardId, userId);
+        }
+    }
+
+    private void addUserToBoard(String boardId, String userId)
+            throws InterruptedException, ExecutionException {
+
+        Firestore db = getFirestore();
+        DocumentReference boardRef = db.collection(BOARD_COLLECTION).document(boardId);
+        ApiFuture<DocumentSnapshot> future = boardRef.get();
+        DocumentSnapshot document = future.get();
+
+        if (document.exists()) {
+            List<String> userIds = (List<String>) document.get("userIds");
+            if (userIds == null) {
+                userIds = new ArrayList<>();
+            }
+
+            if (!userIds.contains(userId)) {
+                userIds.add(userId);
+
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("userIds", userIds);
+                updates.put("updatedAt", Instant.now().toString());
+
+                boardRef.update(updates).get();
+                log.info("User {} added to board {}", userId, boardId);
+            }
+        }
+    }
+
     private boolean invitationExists(String boardId, String memberId)
             throws InterruptedException, ExecutionException {
         Firestore db = getFirestore();
