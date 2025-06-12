@@ -43,6 +43,13 @@ public class BoardController {
         return ResponseEntity.status(HttpStatus.OK).body(board);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<BoardCreationResponse> updateBoardById(@PathVariable("id") String id, @RequestBody @Valid BoardCreationRequest boardCreationRequest, @RequestHeader("Authorization") String authorizationHeader) throws InterruptedException {
+        String userId = getUserIdFromAuthorizationToken(authorizationHeader);
+        BoardCreationResponse boardCreationResponse = boardService.updateBoardById(id, boardCreationRequest, userId);
+        return ResponseEntity.status(HttpStatus.OK).body(boardCreationResponse);
+    }
+
     private String getUserIdFromAuthorizationToken(String authorizationHeader) {
         String token = authorizationHeader.replace("Bearer ", "").trim();
         return jwtUtils.extractUserId(token);

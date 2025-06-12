@@ -1,10 +1,7 @@
 package com.huydev.skipli_be.service.board;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.huydev.skipli_be.dto.request.BoardCreationRequest;
 import com.huydev.skipli_be.dto.response.BoardCreationResponse;
@@ -73,6 +70,7 @@ public class BoardService {
         }
     }
 
+    // Get all boards
     public List<BoardCreationResponse> getAllBoardsByUserId(String userId) throws InterruptedException {
         List<Board> boards = getAllBoardsByUserIdFromFireStore(userId);
         return boards.stream()
@@ -103,6 +101,7 @@ public class BoardService {
         }
     }
 
+    // Get board by boardId
     public BoardCreationResponse getBoardById(String boardId, String userId) throws InterruptedException {
         Board board = getBoardByIdFromFireStore(boardId, userId);
         return BoardCreationResponse.builder()
@@ -132,6 +131,55 @@ public class BoardService {
             return convertDocumentToBoard(document);
         } catch (ExecutionException e) {
             throw new RuntimeException("Failed to get boards by id from firestore" + e.getMessage());
+        }
+    }
+
+    // Update board by Id
+    public BoardCreationResponse updateBoardById(String boardId, BoardCreationRequest boardCreationRequest, String userId) throws InterruptedException {
+        Board updatedBoard = updateBoardToFireStore(boardId, boardCreationRequest, userId);
+        return BoardCreationResponse.builder()
+                .id(updatedBoard.getId())
+                .name(updatedBoard.getName())
+                .description(updatedBoard.getDescription())
+                .build();
+    }
+
+    private Board updateBoardToFireStore(String boardId, BoardCreationRequest request, String userId) throws InterruptedException {
+        try {
+            Firestore db = getFirestore();
+            DocumentReference docRef = db.collection(BOARD_COLLECTION).document(boardId);
+
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
+
+            if(!document.exists()) {
+                throw new RuntimeException("Board not found: " + boardId);
+            }
+
+            List<String> userIdsList = (List<String>) document.get("userIds");
+            if(userIdsList == null || !userIdsList.contains(userId)) {
+                throw new RuntimeException("Access denied");
+            }
+
+            Map<String, Object> updates = new HashMap<>();
+            if(request.getName() != null && !request.getName().trim().isEmpty()) {
+                updates.put("name", request.getName().trim());
+            }
+            if(request.getDescription() != null) {
+                updates.put("description", request.getDescription().trim());
+            }
+            updates.put("updatedAt", Instant.now().toString());
+
+            // Updating
+            ApiFuture<WriteResult> updateFuture = docRef.update(updates);
+            updateFuture.get();
+
+            ApiFuture<DocumentSnapshot> updatedFuture = docRef.get();
+            DocumentSnapshot updatedDocument = updatedFuture.get();
+
+            return convertDocumentToBoard(updatedDocument);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update board" + e.getMessage());
         }
     }
 
