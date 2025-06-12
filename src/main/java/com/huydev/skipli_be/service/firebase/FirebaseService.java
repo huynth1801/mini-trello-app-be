@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -21,7 +20,6 @@ public class FirebaseService {
     private static final String VERIFICATION_COLLECTION = "verifications";
     private static final String CARD_COLLECTION = "cards";
     private static final String TASKS_COLLECTION = "tasks";
-    private static final String BOARD_COLLECTION = "boards";
 
     private Firestore getFirestore() {
         return FirestoreClient.getFirestore();
@@ -68,23 +66,6 @@ public class FirebaseService {
         } catch (Exception e) {
             log.error("Error getting user by email {}",e.getMessage());
             return null;
-        }
-    }
-
-    public String saveBoard(Board board) {
-        try {
-            Firestore db = getFirestore();
-            String boardId = UUID.randomUUID().toString();
-
-            Map<String, Object> boardMap = new HashMap<>();
-            boardMap.put("id", boardId);
-            boardMap.put("name", board.getName());
-            boardMap.put("description", board.getDescription());
-
-            db.collection(BOARD_COLLECTION).document(boardId).set(boardMap).get();
-            return boardId;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to save board" + e);
         }
     }
 

@@ -15,7 +15,7 @@ public class Card {
     String id;
     String name;
     String description;
-    String userId;
+    List<String> userId;
     Instant createdAt;
     Instant updatedAt;
     String boardId;

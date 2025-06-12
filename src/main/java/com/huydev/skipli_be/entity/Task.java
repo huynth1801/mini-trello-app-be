@@ -15,7 +15,7 @@ public class Task {
     String name;
     String description;
     TaskStatus status;
-    String assignedTo;
+    String assigneeId;
     String cardId;
     Instant createdAt;
     Instant updatedAt;
