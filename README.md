@@ -28,9 +28,8 @@ Make sure you have the following installed:
 
 ---
 
-## 📁 Project Structure
-
 ```
+## Project Structure
 <pre> src/ ├── main/ 
         ├── java/  
              └── com/ 
