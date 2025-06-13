@@ -9,9 +9,11 @@ import com.huydev.skipli_be.dto.response.SignInResponse;
 import com.huydev.skipli_be.dto.response.UserResponse;
 import com.huydev.skipli_be.entity.VerificationType;
 import com.huydev.skipli_be.service.authentication.VerificationService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @AllArgsConstructor
+@Slf4j
 @CrossOrigin(origins = "*")
 public class AuthController {
     private final VerificationService verificationService;
@@ -46,13 +49,7 @@ public class AuthController {
 
     @PostMapping("/signin")
     public ResponseEntity<?> signIn(@Valid @RequestBody SignInRequest signInRequest) {
-        try {
-            SignInResponse response = verificationService.signIn(signInRequest.getEmail(), signInRequest.getVerificationCode());
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        } catch (ValidationException e) {
-               return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                       Map.of("error", "Invalid email or verification code")
-               );
-        }
+        SignInResponse response = verificationService.signIn(signInRequest.getEmail(), signInRequest.getVerificationCode());
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

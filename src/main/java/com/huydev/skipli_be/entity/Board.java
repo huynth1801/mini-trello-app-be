@@ -16,6 +16,7 @@ public class Board {
     String name;
     String description;
     List<String> userIds;
+    List<Card> cards;
     Instant createdAt;
     Instant updatedAt;
 }

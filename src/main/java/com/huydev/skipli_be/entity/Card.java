@@ -15,6 +15,7 @@ public class Card {
     String id;
     String name;
     String description;
+    Integer position;
     List<String> list_member;
     Instant createdAt;
     Instant updatedAt;

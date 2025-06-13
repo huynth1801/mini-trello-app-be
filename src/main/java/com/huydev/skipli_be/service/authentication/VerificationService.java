@@ -11,6 +11,8 @@ import com.huydev.skipli_be.repository.UserRepository;
 import com.huydev.skipli_be.repository.VerificationRepository;
 import com.huydev.skipli_be.service.firebase.FirebaseService;
 import com.huydev.skipli_be.service.mail.EmailSenderService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -87,7 +89,6 @@ public class VerificationService {
 
     public SignInResponse signIn(String email, String verificationCode) {
         Verification verification = firebaseService.getVerificationByEmailAndToken(email, verificationCode, VerificationType.LOGIN_VERIFICATION);
-        log.info("Verification type: " + verification);
         if (verification == null) {
             throw new VerificationException("Invalid verification code");
         }

@@ -5,6 +5,7 @@ import com.huydev.skipli_be.dto.request.CardCreationRequest;
 import com.huydev.skipli_be.dto.request.CardUpdateRequest;
 import com.huydev.skipli_be.dto.response.CardCreationResponse;
 import com.huydev.skipli_be.dto.response.CardUserResponse;
+import com.huydev.skipli_be.entity.Card;
 import com.huydev.skipli_be.service.card.CardService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,13 @@ public class CardController {
     public ResponseEntity<CardCreationResponse> retrieveCardDetailsById(@PathVariable String boardId, @PathVariable String id, @RequestHeader("Authorization") String authorizationHeader) {
         String userId = getUserIdFromAuthorizationToken(authorizationHeader);
         CardCreationResponse cardCreationResponse = cardService.retrieveCardById(boardId, id, userId);
+        return ResponseEntity.status(HttpStatus.OK).body(cardCreationResponse);
+    }
+
+    @GetMapping("/{boardId}/cards")
+    public ResponseEntity<List<Card>> retrieveAllCardsByBoardId (@PathVariable String boardId, @RequestHeader("Authorization") String authorizationHeader) {
+        String userId = getUserIdFromAuthorizationToken(authorizationHeader);
+        List<Card> cardCreationResponse = cardService.retrieveCardsByBoardId(boardId, userId);
         return ResponseEntity.status(HttpStatus.OK).body(cardCreationResponse);
     }
 

@@ -236,6 +236,10 @@ public class CardService {
         }
     }
 
+    public List<Card> retrieveCardsByBoardId(String boardId, String userId) {
+        return getCardFromFirestoreByName(boardId, userId);
+    }
+
     private List<Card> getCardFromFirestoreByName(String boardId, String userId) {
         try {
             if(!hasAccessToBoard(boardId, userId)) {

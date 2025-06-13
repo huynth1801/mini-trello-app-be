@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class BoardService {
     private final FirebaseService firebaseService;
     private static final String BOARD_COLLECTION = "boards";
+    private static final String CARD_COLLECTION = "cards";
 
     private Firestore getFirestore() {
         return FirestoreClient.getFirestore();
@@ -63,7 +64,29 @@ public class BoardService {
             boardMap.put("createdAt", Instant.now().toString());
             boardMap.put("updatedAt", Instant.now().toString());
 
-            db.collection(BOARD_COLLECTION).document(boardId).set(boardMap).get();
+            DocumentReference boardRef = db.collection(BOARD_COLLECTION).document(boardId);
+            ApiFuture<WriteResult> boardResult = boardRef.set(boardMap);
+            boardResult.get();
+
+            List<String> defaultCardLists = Arrays.asList("Icebox", "Backlog", "On Going", "Waiting for Review", "Done");
+
+            CollectionReference listRef = db.collection(CARD_COLLECTION);
+
+            for (int i = 0; i < defaultCardLists.size(); i++) {
+                Map<String, Object> listMap = new HashMap<>();
+                listMap.put("id", UUID.randomUUID().toString());
+                listMap.put("name", defaultCardLists.get(i));
+                listMap.put("boardId", boardId);
+                listMap.put("description", null);
+                listMap.put("createdBy", userId);
+                listMap.put("list_member", userIdsList);
+                listMap.put("position", i);
+                listMap.put("createdAt", Instant.now().toString());
+                listMap.put("updatedAt", Instant.now().toString());
+                listRef.add(listMap);
+            }
+
+//            db.collection(BOARD_COLLECTION).document(boardId).set(boardMap).get();
             return boardId;
         } catch (Exception e) {
             throw new RuntimeException("Failed to save board" + e);
