@@ -302,6 +302,7 @@ public class CardService {
         card.setName(document.getString("name"));
         card.setDescription(document.getString("description"));
         card.setBoardId(document.getString("boardId"));
+        card.setPosition(document.getLong("position").intValue());
         card.setCreatedBy(document.getString("createdBy"));
         card.setList_member((List<String>) document.get("list_member"));
         // Parse timestamps
